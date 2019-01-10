@@ -22,11 +22,75 @@ import spock.lang.Unroll
 
 
 class ArtifactTransformValuesInjectionIntegrationTest extends AbstractDependencyResolutionTest implements ArtifactTransformTestFixture {
+    def "transform can receive configuration via constructor parameter"() {
+        settingsFile << """
+            include 'a', 'b', 'c'
+        """
+        setupBuildWithColorAttributes()
+        buildFile << """
+            allprojects {
+                dependencies {
+                    registerTransform(MakeGreen) {
+                        from.attribute(color, 'blue')
+                        to.attribute(color, 'green')
+                        actionClass = MakeGreenAction
+                        configuration {
+                            extension = 'green'
+                        }
+                    }
+                }
+            }
+            
+            project(':a') {
+                dependencies {
+                    implementation project(':b')
+                    implementation project(':c')
+                }
+            }
+            
+            class MakeGreen implements Serializable {
+                String extension
+            }
+            
+            class MakeGreenAction extends ArtifactTransform {
+                MakeGreen conf
+                
+                @Inject
+                MakeGreenAction(MakeGreen conf) {
+                    this.conf = conf
+                }
+                
+                List<File> transform(File input) {
+                    println "processing \${input.name}"
+                    def output = new File(outputDirectory, input.name + "." + conf.extension)
+                    output.text = "ok"
+                    return [output]
+                }
+            }
+"""
+
+        when:
+        run(":a:resolve")
+
+        then:
+        outputContains("processing b.jar")
+        outputContains("processing c.jar")
+        outputContains("result = [b.jar.green, c.jar.green]")
+    }
+
+    def "transform can receive configuration via abstract getter"() {
+        expect: false
+    }
+
+    def "transform can receive configuration and construction parameters"() {
+        expect: false
+    }
+
     def "transform can receive dependencies via abstract getter"() {
         settingsFile << """
             include 'a', 'b', 'c'
         """
-        setupBuildWithColorAttribute()
+        setupBuildWithColorTransform()
         buildFile << """
 
 project(':a') {
@@ -67,7 +131,7 @@ abstract class MakeGreen extends ArtifactTransform {
         settingsFile << """
             include 'a', 'b', 'c'
         """
-        setupBuildWithColorAttribute()
+        setupBuildWithColorTransform()
         buildFile << """
 
 project(':a') {
@@ -110,7 +174,7 @@ abstract class MakeGreen extends ArtifactTransform {
         settingsFile << """
             include 'a', 'b', 'c'
         """
-        setupBuildWithColorAttribute()
+        setupBuildWithColorTransform()
         buildFile << """
 
 project(':a') {
@@ -147,7 +211,7 @@ abstract class MakeGreen extends ArtifactTransform {
         settingsFile << """
             include 'a', 'b', 'c'
         """
-        setupBuildWithColorAttribute()
+        setupBuildWithColorTransform()
         buildFile << """
 
 project(':a') {
