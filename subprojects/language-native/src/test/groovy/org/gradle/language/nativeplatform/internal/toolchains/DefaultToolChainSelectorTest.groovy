@@ -31,7 +31,12 @@ import org.gradle.nativeplatform.toolchain.internal.NativeToolChainInternal
 import org.gradle.nativeplatform.toolchain.internal.NativeToolChainRegistryInternal
 import org.gradle.nativeplatform.toolchain.internal.PlatformToolProvider
 import org.gradle.util.UsesNativeServices
+import org.gradle.util.VersionNumber
 import spock.lang.Specification
+import spock.lang.Unroll
+
+import static org.gradle.language.swift.SwiftVersion.SWIFT3
+import static org.gradle.language.swift.SwiftVersion.SWIFT4
 
 @UsesNativeServices
 class DefaultToolChainSelectorTest extends Specification {
@@ -89,5 +94,23 @@ class DefaultToolChainSelectorTest extends Specification {
                 MachineArchitecture.X86,
                 MachineArchitecture.X86_64
         ]
+    }
+
+    @Unroll
+    def "can associate the compiler version #compilerVersion to #languageVersion language version"() {
+        expect:
+        DefaultToolChainSelector.toSwiftVersion(VersionNumber.parse(compilerVersion)) == languageVersion
+
+        where:
+        // See https://swift.org/download
+        compilerVersion | languageVersion
+        '4.0.3'         | SWIFT4
+        '4.0.2'         | SWIFT4
+        '4.0'           | SWIFT4
+        '3.1.1'         | SWIFT3
+        '3.1'           | SWIFT3
+        '3.0.2'         | SWIFT3
+        '3.0.1'         | SWIFT3
+        '3.0'           | SWIFT3
     }
 }
